@@ -1,0 +1,53 @@
+#!/bin/bash
+
+function mi200_oam_stress() {
+    OAM="${ROCR_VISIBLE_DEVICES:-0}" 			
+    for (( gcd=0; gcd<2; gcd++ ));
+    do
+	    #ROCR_VISIBLE_DEVICES=$OAM $@
+	    #ROCR_VISIBLE_DEVICES=$OAM $@
+	    num=$(expr $OAM + $gcd)
+	    #echo $num
+        if [[ $gcd == 0 ]]; then
+            ROCR_VISIBLE_DEVICES=$num $@  -d result &
+        else
+            ROCR_VISIBLE_DEVICES=$num $@  -d result_${gcd} &
+        fi
+    done
+    wait
+
+
+    #engine,version,providers,device,precision,optimizer,io_binding,model_name,inputs,threads,batch_size,sequence_length,custom_layer_num,datetime,test_times,QPS,average_latency_ms,latency_variance,latency_90_percentile,latency_95_percentile,latency_99_percentile
+    #onnxruntime,1.12.0,migraphx,cuda,fp16,by_script,True,bert-base-cased,1,128,1,384,,2022-05-20 20:47:17.756779,100,289.38,3.46,0.00,3.51,3.52,3.55
+    qps1=$(cat ./result | tail -n 1 |awk -F ',' '{print $16}')
+    qps2=$(cat ./result_1 | tail -n 1 |awk -F ',' '{print $16}')
+    oamqps=$(echo "$qps1+$qps2" | bc) 
+
+    echo $oamqps
+
+    cat ./result | tail -n 1 |awk -F ','  '{ print $3 "," $5 "," $8 "," $11 "," $12 "," $14 "," '"$qps1"'"," '"$qps2"' "," '"$oamqps"' }' >> oamperf.csv
+
+}
+
+
+echo "model,Date,performance,metric" >>  oamperf.csv
+
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 --provider=migraphx -p fp16    --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+mi200_oam_stress $CMD 
+
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 32 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+mi200_oam_stress $CMD 
+
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 16 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+mi200_oam_stress $CMD 
+
+
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+mi200_oam_stress $CMD 
+
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 32 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+mi200_oam_stress $CMD 
+
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 16 --provider=rocm -p fp16   --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+mi200_oam_stress $CMD 
+

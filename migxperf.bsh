@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -x
+
+TOKENIZERS_PARALLELISM=false
+#export MIGRAPHX_DISABLE_POINTWISE_FUSION="1"
+
+
+rm -rf ./onnx_models
+
+python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 16 --batch_sizes 1 --provider=migraphx -p fp16 --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu
+
+python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 16 --batch_sizes 1 --provider=migraphx -p fp32 --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu
+
+# root@zt-dh170-48:/workspace/onnxruntime/build/Release/onnxruntime/transformers# /workspace/migraphx/build/bin/driver perf ./onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+#cat perf_resnet50_v1_bs17_tuned_for_bs40.txt |sed -n '/Summary:/,$p'
+
+for bs in {1,2,4,8,16}
+do
+  #subtitle=$(printf "############  FP16 b4ort2 MI200 BS: $bs  BERT SQUAD  ###########################\n")
+  subtitle=$(printf "############  FP16 b4ort2 MI200 BS: $bs BBC   ###########################\n")
+
+  printf '%s\n' "$subtitle"
+  printf '%s\n' "$subtitle" >> raw_perf_complete.txt
+  printf '%s\n' "$subtitle" >> migx_summary.txt
+
+
+  /opt/rocm/bin/migraphx-driver perf ./onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids $bs 384 >  raw_perf.txt
+  #/opt/rocm/bin/migraphx-driver perf /workspace/mlperf/bert.onnx  --fp16 --fill1 segment_ids --fill1 input_ids --input-dim @input_ids $bs 384 >  raw_perf.txt
+  cat raw_perf.txt >> raw_perf_complete.txt
+  cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  migx_summary.txt
+done
+
+for bs in {1,2,4,8,16}
+do
+  #subtitle=$(printf "############  FP32 b4ort2 MI200 BS: $bs  BERT SQUAD  ###########################\n")
+  subtitle=$(printf "############  FP32 b4ort2 MI200 BS: $bs BBC   ###########################\n")
+
+  printf '%s\n' "$subtitle"
+  printf '%s\n' "$subtitle" >> raw_perf_complete.txt
+  printf '%s\n' "$subtitle" >> migx_summary.txt
+
+
+  /opt/rocm/bin/migraphx-driver perf ./onnx_models/bert_base_cased_1_fp32_gpu.onnx  --fill1 input_ids --input-dim @input_ids $bs 384 >  raw_perf.txt
+  #/opt/rocm/bin/migraphx-driver perf /workspace/mlperf/bert.onnx  --fill1 segment_ids --fill1 input_ids --input-dim @input_ids $bs 384 >  raw_perf.txt
+  cat raw_perf.txt >> raw_perf_complete.txt
+  cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  migx_summary.txt
+done
+

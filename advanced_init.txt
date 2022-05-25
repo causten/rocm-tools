@@ -1,0 +1,49 @@
+
+apt install /workspace/AMDMIGraphX/build/*.deb
+pip install /workspace/onnxruntime/build/Release/dist/*.whl
+ldconfig
+
+
+
+
+docker run --device='/dev/kfd' --device='/dev/dri' -v=`pwd`:/workspace -w /workspace --group-add video -it --cpuset-cpus=32-63 -e ROCBLAS_TENSILE_LIBPATH=/workspace/library -e ROCR_VISIBLE_DEVICES=4 migxclean:latest
+
+
+rbuild package -B build -d depend --cxx=/opt/rocm/llvm/bin/clang++
+
+
+
+sed -i 's/^blaze.*$/live-clones\/blaze@v3.8 -X header -DHEADER_DIR=blaze/g'  src/requirements.txt
+
+#############
+# ONNXRUNTIME
+#############
+git config --global --add safe.directory '*'
+sed -i 's/list(APPEND HIP_CLANG_FLAGS --amdgpu-target=gfx906 --amdgpu-target=gfx908)/list(APPEND HIP_CLANG_FLAGS --amdgpu-target=gfx906 --amdgpu-target=gfx908 --amdgpu-target=gfx1030)/g'  onnxruntime/cmake/onnxruntime_providers.cmake
+sed -i 's/Version(torch.__version__) >= Version("1.11.0")/Version(torch.__version__).release >= Version("1.11.0").release/g' onnxruntime/onnxruntime/python/tools/transformers/torch_onnx_export_helper.py
+
+
+
+
+
+    apt update
+    apt-get install sqlite3 libsqlite3-dev -y
+    apt-get install libfmt-dev -y
+    cd rocmProfileData/
+    make; make install
+    cd ..
+    dpkg -i clones_develop/build/*.deb
+    pip install ./onnxruntime_rocm-1.12.0-cp37-cp37m-linux_x86_64.whl
+
+
+
+#######
+# Run stuff
+###############
+
+python3 /code/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu
+
+/opt/rocm/bin/migraphx-driver perf ./onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384
+
+
+

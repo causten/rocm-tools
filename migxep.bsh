@@ -1,0 +1,61 @@
+#!/bin/bash
+
+
+function mi200_oam_stress() {
+    for (( gcd=0; gcd<2; gcd++ ));
+    do
+        if [[ $gcd == 0 ]]; then
+            ROCR_VISIBLE_DEVICES="$gcd" $1 $2 &
+        else
+            ROCR_VISIBLE_DEVICES="$gcd" $1 $2_${gcd} &
+        fi
+    done
+    wait
+}
+
+
+TOKENIZERS_PARALLELISM=false
+#export MIGRAPHX_DISABLE_POINTWISE_FUSION="1"
+#export ROCBLAS_TENSILE_LIBPATH=/code/library
+
+#export ROCBLAS_LAYER=2
+CMD="/workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py"
+
+#EXTRA_FLAGS=" -d results.txt -t 1"
+EXTRA_FLAGS=" -d results.txt "
+
+
+PROVIDER="migraphx"
+DISABLE_FLAGS=" --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu "
+
+
+# python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu
+# python3 /code/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16  --disable_embed_layer_norm
+
+rm -rf onnx_models/*
+
+for bs in {1,64}
+do
+  for sl in {384,}
+    do
+      python3 $CMD -g -m bert-base-cased --sequence_length $sl --batch_sizes $bs --provider=$PROVIDER -p fp16 $DISABLE_FLAGS $EXTRA_FLAGS
+    done
+done
+
+for bs in {1,32}
+do
+  for sl in {384,}
+  do
+    python $CMD -g -m bert-large-uncased --sequence_length $sl --batch_sizes $bs --provider=$PROVIDER -p fp16 $DISABLE_FLAGS $EXTRA_FLAGS
+  done
+done
+##
+
+for bs in {1,16,}
+do
+  for sl in {384,}
+  do
+    python $CMD -g -m distilgpt2 --sequence_length $sl --batch_sizes $bs --provider=$PROVIDER -p fp16 $DISABLE_FLAGS $EXTRA_FLAGS
+  done
+done
+
