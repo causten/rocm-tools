@@ -12,6 +12,7 @@ WORKDIR /workspace
 
 # pre-requisites
 RUN apt update && apt install -y \
+  bc \
   git \
   lsb-release \
   half \
