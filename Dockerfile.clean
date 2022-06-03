@@ -12,20 +12,20 @@ WORKDIR /workspace
 
 # pre-requisites
 RUN apt update && apt install -y \
-  bc \
-  git \
-  lsb-release \
-  half \
-  python3-dev \
-  python3-numpy \
-  python3-setuptools \
-  python3-wheel \
-  python3-pip \
-  software-properties-common \
-  sqlite3 \
-  libsqlite3-dev \
-  libfmt-dev \
-  wget
+   bc \
+   git \
+   lsb-release \
+   half \
+   python3-dev \
+   python3-numpy \
+   python3-setuptools \
+   python3-wheel \
+   python3-pip \
+   software-properties-common \
+   sqlite3 \
+   libsqlite3-dev \
+   libfmt-dev \
+   wget
 
 # hipify-clang install may fail on older ROCm releases
 RUN apt install -y hipify-clang || true
