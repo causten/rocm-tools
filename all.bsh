@@ -1,0 +1,48 @@
+
+export ROCBLAS_LAYER=2
+export MIOPEN_ENABLE_LOGGING_CMD=1
+
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384 --batch_sizes 1 2 64 -t 1 --provider=migraphx -p fp16 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/attention_models
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384 --batch_sizes 1 2 64 -t 1 --provider=migraphx -p fp32 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/attention_models
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384 --batch_sizes 1 2 64 -t 1 --provider=migraphx -p fp16 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/onnx_models  --disable_layer_norm --disable_attention
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384 --batch_sizes 1 2 64 -t 1 --provider=migraphx -p fp32 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/onnx_models  --disable_layer_norm --disable_attention
+#
+#
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384 --batch_sizes 1 2 32 -t 1 --provider=migraphx -p fp16 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/attention_models
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384 --batch_sizes 1 2 32 -t 1 --provider=migraphx -p fp32 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/attention_models
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384 --batch_sizes 1 2 32 -t 1 --provider=migraphx -p fp16 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/onnx_models  --disable_layer_norm --disable_attention
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384 --batch_sizes 1 2 32 -t 1 --provider=migraphx -p fp32 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/onnx_models  --disable_layer_norm --disable_attention
+#
+#
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384 --batch_sizes 1 2 16 -t 1 --provider=migraphx -p fp16 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/attention_models
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384 --batch_sizes 1 2 16 -t 1 --provider=migraphx -p fp32 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/attention_models
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384 --batch_sizes 1 2 16 -t 1 --provider=migraphx -p fp16 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/onnx_models  --disable_layer_norm --disable_attention
+#python /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384 --batch_sizes 1 2 16 -t 1 --provider=migraphx -p fp32 --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm --disable_bias_skip_layer_norm --disable_bias_gelu  --onnx_dir /workspace/benchmarking/onnx_models  --disable_layer_norm --disable_attention
+#
+#for bs in {1,2,8,32,64,256,1024}
+#do
+  #migraphx-driver run /workspace/mlperf/dlrm_top.onnx --batch $bs 
+  #migraphx-driver run /workspace/mlperf/dlrm_top.onnx --fp16 --batch $bs 
+#done
+#
+#for bs in {1,2,8,32,64,256,1024}
+#do
+  #migraphx-driver run /workspace/mlperf/dlrm_bot.onnx --batch $bs 
+  #migraphx-driver run /workspace/mlperf/dlrm_bot.onnx --fp16 --batch $bs 
+#done
+
+
+## This is the Bert used in MLPerf
+for bs in {1,2,64}
+do
+  migraphx-driver run /workspace/mlperf/bert.onnx --fill1 input_ids --fill1 segment_ids --input-dim @input_ids $bs 384 --fp16 2>&1 |tee bert_fp16.out
+  migraphx-driver run /workspace/mlperf/bert.onnx --fill1 input_ids --fill1 segment_ids --input-dim @input_ids $bs 384  2>&1 |tee bert_fp32.out 
+done
+
+## This is the Bert used in ONNX Model Zoo
+for bs in {1,2,64}
+do
+  migraphx-driver run /workspace/mlperf/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0 --fp16 --batch $bs 2>&1 |tee bertsquad_fp16.out
+  migraphx-driver run /workspace/mlperf/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0  --batch $bs 2>&1 |tee bertsquad.out
+done
+
