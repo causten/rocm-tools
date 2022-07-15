@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ROC_USE_FGS_KERNARG=0
+
 function mi200_gcd_stress() {
     rm ./result*
     GCD="${ROCR_VISIBLE_DEVICES:-0}"
@@ -47,86 +49,76 @@ function mi200_oam_stress() {
 echo "model,Date,performance,metric" >>  oamperf.csv
 
 
-
-
-echo "OAM Stress at BS1 Alans Attention" >> oamperf.csv
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16    --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+echo "OAM Stress at BS1 Attention" >> oamperf.csv
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/attention_models -m bert-base-cased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/attention_models -m bert-large-uncased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/attention_models -m distilgpt2"
 mi200_oam_stress $CMD
 
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m bert-base-cased"
 mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16   --verbose  --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m bert-large-uncased"
 mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
-mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
-mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16   --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m distilgpt2"
 mi200_oam_stress $CMD
 
 
 echo "GCD Stress at BS1 Alans Attention" >> oamperf.csv
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16    --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1  --provider=migraphx -p fp16 --verbose --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models-m bert-base-cased"
 mi200_gcd_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
-mi200_gcd_stress $CMD 
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16   --verbose  --disable_gelu  --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1  --provider=migraphx -p fp16 --verbose --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models -m bert-large-uncased"
 mi200_gcd_stress $CMD
-
-
-
-echo "OAM Stress at BS >1 Alans Attention " >> oamperf.csv
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 --provider=migraphx -p fp16    --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1  --provider=migraphx -p fp16 --verbose --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models -m distilgpt2"
+mi200_gcd_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 64 --provider=migraphx -p fp16 --verbose --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models -m bert-base-cased"
 mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 32 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 32 --provider=migraphx -p fp16 --verbose --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models -m bert-large-uncased"
 mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 16 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 16 --provider=migraphx -p fp16 --verbose --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm  --onnx_dir /workspace/benchmarking/attention_models -m distilgpt2"
 mi200_oam_stress $CMD
 
 echo "Stress with --disable_attention " >> oamperf.csv
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16    --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 1  --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m bert-base-cased"
 mi200_gcd_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
-mi200_gcd_stress $CMD 
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 1 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 1  --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m bert-large-uncased"
 mi200_gcd_stress $CMD
-
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 --provider=migraphx -p fp16    --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
-mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 32 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
-mi200_oam_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 16 --provider=migraphx -p fp16   --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
-mi200_oam_stress $CMD
-
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 1  --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m distilgpt2"
 mi200_gcd_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 64 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m bert-base-cased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 32 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m bert-large-uncased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 16 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m distilgpt2"
+mi200_oam_stress $CMD
 
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 1  --provider=rocm -p fp16 --disable_attention --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm_disable_attention -m bert-base-cased"
 mi200_gcd_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 1 --provider=rocm -p fp16   --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 1  --provider=rocm -p fp16 --disable_attention --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm_disable_attention -m bert-large-uncased"
 mi200_gcd_stress $CMD
-
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 1  --provider=rocm -p fp16 --disable_attention --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm_disable_attention -m distilgpt2"
+mi200_gcd_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 64 --provider=rocm -p fp16 --disable_attention --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm_disable_attention -m bert-base-cased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 32 --provider=rocm -p fp16 --disable_attention --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm_disable_attention -m bert-large-uncased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 16 --provider=rocm -p fp16 --disable_attention --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm_disable_attention -m distilgpt2"
 mi200_oam_stress $CMD
 
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m bert-large-uncased --sequence_length 384  --batch_sizes 32 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+
+echo "Stress with ROCMEP defaults " >> oamperf.csv
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1  --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m bert-base-cased"
+mi200_gcd_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1  --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m bert-large-uncased"
+mi200_gcd_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1  --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m distilgpt2"
+mi200_gcd_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 64 --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m bert-base-cased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 32 --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m bert-large-uncased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 16 --provider=rocm -p fp16 --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm -m distilgpt2"
 mi200_oam_stress $CMD
 
-CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g -m distilgpt2 --sequence_length 384  --batch_sizes 16 --provider=rocm -p fp16   --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
-mi200_oam_stress $CMD
 
