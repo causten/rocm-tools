@@ -1,10 +1,19 @@
+#!/usr/bin/bash
 # Tool that captures the Kernel traces
+
+export ROC_USE_FGS_KERNARG=0
 
 function capture_trace() {
     rm ./trace.rpd 2>/dev/null
 
-    runTracer.sh $2
-    echo "$1.rpd" >> trace_data.out
+    runTracer.sh $2 -d result
+    
+    echo "$1.rpd " >> trace_data.out
+    echo "$2.rpd " >> trace_data.out
+
+    #onnxruntime,1.12.0,migraphx,cuda,fp16,by_script,True,bert-base-cased,1,128,1,384,,2022-05-20 20:47:17.756779,100,289.38,3.46,0.00,3.51,3.52,3.55
+    cat ./result | tail -n 1 |awk -F ','  '{ print "average_latency_ms: " $17 " QPS: " $16 }' >> trace_data.out
+
     sqlite3 trace.rpd """select * from top""" >> trace_data.out
     mv "trace.rpd" "$1.rpd"
 }
@@ -12,11 +21,21 @@ function capture_trace() {
 
 BMCMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py"
 
-
+echo "###################################################" >> trace_data.out
+echo "New tracing job started " >> trace_data.out
 date >> trace_data.out
+echo "###################################################" >> trace_data.out
+
 
 capture_trace "trace_bbc_rocm"             "$BMCMD -g -m bert-base-cased --sequence_length 384  --batch_sizes 1  -t 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
-capture_trace "trace_bbc_rocm_dis_attn_64" "$BMCMD -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 -t 1 --provider=rocm -p fp16  --disable_embed_layer_norm  --disable_attention --onnx_dir /workspace/benchmarking/onnx_models_rocm_disable_attention"
+capture_trace "trace_bbc_rocm_64" "$BMCMD -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 -t 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
 
-capture_trace "trace_bbc_migx"    "$BMCMD -g -m bert-base-cased --sequence_length 384  --batch_sizes 1  --provider=migraphx -p fp16 -t 1 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
-capture_trace "trace_bbc_migx_64" "$BMCMD -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 --provider=migraphx -p fp16 -t 1 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/attention_models"
+capture_trace "trace_bbc_migx"    "$BMCMD -g -m bert-base-cased --sequence_length 384  --batch_sizes 1  --provider=migraphx -p fp16 -t 1 --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+capture_trace "trace_bbc_migx_64" "$BMCMD -g -m bert-base-cased --sequence_length 384  --batch_sizes 64 --provider=migraphx -p fp16 -t 1 --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+
+
+capture_trace "trace_blu_rocm"             "$BMCMD -g -m bert-large-uncased --sequence_length 384  --batch_sizes 1  -t 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+capture_trace "trace_blu_rocm_64" "$BMCMD -g -m bert-large-uncased --sequence_length 384  --batch_sizes 32 -t 1 --provider=rocm -p fp16  --disable_embed_layer_norm --onnx_dir /workspace/benchmarking/onnx_models_rocm"
+
+capture_trace "trace_blu_migx"    "$BMCMD -g -m bert-large-uncased --sequence_length 384  --batch_sizes 1  --provider=migraphx -p fp16 -t 1 --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
+capture_trace "trace_blu_migx_64" "$BMCMD -g -m bert-large-uncased --sequence_length 384  --batch_sizes 32 --provider=migraphx -p fp16 -t 1 --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm"
