@@ -1,11 +1,9 @@
-FROM rocm/pytorch:latest
-#FROM rocm/pytorch-private:superbench_rocm512_rc1_rocblas_internal_v2
+#FROM rocm/pytorch:latest
+FROM rocm/pytorch:rocm5.3_ubuntu20.04_py3.7_pytorch_1.12.1
 
-
+ENV ROC_USE_FGS_KERNARG=0
 ENV DEBIAN_FRONTEND noninteractive
 ARG branch="develop"
-#ARG branch="branch_for_ort2"
-#ARG branch="branch_for_ort"
 ARG build_type="Release"
 
 WORKDIR /workspace
@@ -31,58 +29,26 @@ RUN apt update && apt install -y \
 # hipify-clang install may fail on older ROCm releases
 RUN apt install -y hipify-clang || true
 
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
-RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
-RUN apt update && apt install -y cmake
+# pre-requisites
+ENV CMAKE_VERSION=3.24.2
+RUN cd /usr/local && \
+    wget -q -O - https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz | tar zxf -
+ENV PATH=/usr/local/cmake-${CMAKE_VERSION}-linux-x86_64/bin:${PATH}
 
-# build MIGraphX
+
+# MIGraphX pip prereqs
 RUN pip3 install https://github.com/RadeonOpenCompute/rbuild/archive/master.tar.gz
-#RUN mkdir /workspace/migraphx
-#
-#RUN cd /workspace/migraphx && git clone --depth=1 --branch ${branch} https://github.com/ROCmSoftwarePlatform/AMDMIGraphX src && cd src && git show --oneline -s
 
-# TODO OK to remove at rocm >= 5.1
-#RUN cd migraphx &&  sed -i 's/add_subdirectory(doc)/#add_subdirectory(doc)/g' src/CMakeLists.txt || true
-
-# TODO OK to remove once bitbucket.org can be accessed from a Lockhart system (see DeepLearningModels/issues/243)
-#RUN cd migraphx && sed -i 's/^blaze.*$/live-clones\/blaze@v3.8 -X header -DHEADER_DIR=blaze/g'  src/requirements.txt || true
-
-#RUN cd /workspace/migraphx && \
-    #rbuild package \
-        #--cxx /opt/rocm/llvm/bin/clang++ \
-        #-d /workspace/migraphx/deps \
-        #-B build \
-        #-S /workspace/migraphx/src \
-        #-DPYTHON_EXECUTABLE=/usr/bin/python3 \
-    #&& cd /workspace/migraphx/build \
-    #&& dpkg -i *.deb
-#
-
-# Build ONNX runtime wheel package
-#RUN git clone --recursive https://github.com/microsoft/onnxruntime
-
-# TODO: Remove once repo supports gfx1030
-#RUN sed -i 's/list(APPEND HIP_CLANG_FLAGS --amdgpu-target=gfx906 --amdgpu-target=gfx908)/list(APPEND HIP_CLANG_FLAGS --amdgpu-target=gfx908)/g'  onnxruntime/cmake/onnxruntime_providers.cmake
 
 # TODO: Revisit once https://github.com/microsoft/onnxruntime/issues/10946 is addressed
 #RUN sed -i 's/Version(torch.__version__) >= Version("1.11.0")/Version(torch.__version__).release >= Version("1.11.0").release/g' onnxruntime/onnxruntime/python/tools/transformers/torch_onnx_export_helper.py
+RUN cd onnxruntime && ./build.sh --parallel --cmake_extra_defines ONNXRUNTIME_VERSION=`cat ./VERSION_NUMBER` --config $build_type --skip_tests --build_wheel --use_migraphx --use_rocm --rocm_version=5.3 --rocm_home /opt/rocm
+RUN pip3 install /workspace/onnxruntime/build/Linux/$build_type/dist/*.whl
+RUN ldconfig
 
-#RUN cd onnxruntime \
-  #&& git show --oneline -s \
-  #&& python3 tools/ci_build/build.py \
-    #--cmake_extra_defines ONNXRUNTIME_VERSION=`cat ./VERSION_NUMBER` \
-    #--rocm_version=`cat /opt/rocm/.info/version-dev` \
-    #--build_dir build \
-    #--config Release \
-    #--parallel \
-    #--skip_tests \
-    #--build_wheel \
-    #--use_migraphx \
-    #--use_rocm --rocm_home /opt/rocm \
-  #&& pip install ./build/Release/dist/*.whl \
-  #&& ldconfig
-#
-RUN pip3 install psutil onnx coloredlogs torch packaging transformers sympy
+
+# ONNX Runtime prereqs
+RUN pip3 install psutil onnx coloredlogs packaging transformers sympy
 RUN pip3 install -U numpy
 
 # record configuration for posterity

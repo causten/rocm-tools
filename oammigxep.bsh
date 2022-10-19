@@ -54,6 +54,14 @@ ls -l /etc/alternatives |grep "rocm ->" >> oamperf.csv
 echo "###########################################" >>  oamperf.csv
 
 
+echo "Using OAM to get batch sizes of 64/32/16 " >> oamperf.csv
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 32 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m bert-base-cased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 16 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m bert-large-uncased"
+mi200_oam_stress $CMD
+CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384 --batch_sizes 8 --provider=migraphx -p fp16 --verbose  --disable_gelu --disable_layer_norm --disable_attention --disable_skip_layer_norm --disable_embed_layer_norm -m distilgpt2"
+mi200_oam_stress $CMD
+
 echo "GCD Stress BS1" >> oamperf.csv
 CMD="python3 /workspace/onnxruntime/build/Release/onnxruntime/transformers/benchmark.py -g --sequence_length 384  --batch_sizes 1  --provider=migraphx -p fp16 --verbose --disable_gelu --disable_skip_layer_norm --disable_embed_layer_norm --disable_layer_norm --disable_attention -m bert-base-cased"
 mi200_gcd_stress $CMD
