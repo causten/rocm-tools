@@ -1,0 +1,158 @@
+#!/bin/bash
+
+
+export BBCTUNINGS=/workspace/AMDMIGraphX/build/ck_tuning_bbc_1_32_64.json
+export BLUTUNINGS=/workspace/AMDMIGraphX/build/ck_tuning_blu_1_32_64.json
+export DSTTUNINGS=ck_tuning_2022_12_08_00_02.json
+
+export ROC_USE_FGS_KERNARG=0
+export ORT_TRANSFORMER_OPTIONS=8
+export MIGRAPHX_REMOVE_LAST_OUTPUT=1
+
+
+export CSVFILE=migxperf.csv
+
+function mi200_gcd_stress() {
+    rm ./result*
+    GCD="${ROCR_VISIBLE_DEVICES:-0}"
+    ROCR_VISIBLE_DEVICES=$GCD $@  2>&1 |tee result
+
+    qps=$(awk -F'[/ ]' '/Rate/{k=$2}END{print k}' result)
+    ms=$(grep 'Total time:' result | awk '{ print substr($0,13, length($0)-14)}')
+
+
+    echo "$@" >> $CSVFILE
+    echo "Latency,$ms, $qps" >> $CSVFILE
+}
+
+
+function mi200_oam_stress() {
+
+    rm ./result*
+
+    OAM="${ROCR_VISIBLE_DEVICES:-0}"
+    for (( gcd=0; gcd<2; gcd++ ));
+    do
+        num=$(expr $OAM + $gcd)
+        if [[ $gcd == 0 ]]; then
+            ROCR_VISIBLE_DEVICES=$num $@  2>&1 |tee result &
+        else
+            ROCR_VISIBLE_DEVICES=$num $@  2>&1 |tee result_1 &
+        fi
+    done
+    wait
+
+    qps1=$(awk -F'[/ ]' '/Rate/{k=$2}END{print k}' result)
+    ms1=$(grep 'Total time:' result | awk '{ print substr($0,13, length($0)-14)}')
+
+    qps2=$(awk -F'[/ ]' '/Rate/{k=$2}END{print k}' result_1)
+    ms2=$(grep 'Total time:' result_1 | awk '{ print substr($0,13, length($0)-14)}')
+
+    oamqps=$(echo "$qps1+$qps2" | bc)
+    echo $oamqps
+
+    echo $@ >> $CSVFILE
+    echo "Throughput,$ms1,$ms2,$qps1,$qps2,$oamqps" >> $CSVFILE
+}
+
+
+
+echo "###########################################" >>  $CSVFILE
+echo "New Run " >>  $CSVFILE
+date >> $CSVFILE
+ls -l /etc/alternatives |grep "rocm ->" >> $CSVFILE
+echo "###########################################" >> $CSVFILE
+
+export MIGRAPHX_CK_TUNING=$BBCTUNINGS
+#migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384  --batch 1  -o bert_base_cased_1_fp16_gpu_1.mxr
+#migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 32 384 --batch 32 -o bert_base_cased_1_fp16_gpu_32.mxr
+#migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64 -o bert_base_cased_1_fp16_gpu_64.mxr
+
+export MIGRAPHX_CK_TUNING=$BLUTUNINGS
+#migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384  --batch 1  -o bert_large_uncased_1_fp16_gpu_1.mxr
+migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 32 384 --batch 32 -o bert_large_uncased_1_fp16_gpu_32.mxr
+migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64 -o bert_large_uncased_1_fp16_gpu_64.mxr
+
+echo "Using OAM to get batch sizes of 64/32/16 " >> $CSVFILE
+
+echo "MIGRAPHX PERF bert_base_cased_1_fp16_gpu  GCD" >> $CSVFILE
+export MIGRAPHX_CK_TUNING=$BBCTUNINGS
+CMD="migraphx-driver perf bert_base_cased_1_fp16_gpu_1.mxr --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+mi200_gcd_stress $CMD
+CMD="migraphx-driver perf bert_base_cased_1_fp16_gpu_32.mxr --fill1 input_ids --input-dim @input_ids 32 384 --batch 32"
+mi200_gcd_stress $CMD
+CMD="migraphx-driver perf bert_base_cased_1_fp16_gpu_64.mxr --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+mi200_gcd_stress $CMD
+
+
+CMD="migraphx-driver perf bert_base_cased_1_fp16_gpu_1.mxr --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+mi200_oam_stress $CMD
+CMD="migraphx-driver perf bert_base_cased_1_fp16_gpu_32.mxr --fill1 input_ids --input-dim @input_ids 32 384 --batch 32"
+mi200_oam_stress $CMD
+CMD="migraphx-driver perf bert_base_cased_1_fp16_gpu_64.mxr --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+mi200_oam_stress $CMD
+
+echo "MIGRAPHX PERF bert_large_uncased_1_fp16_gpu  GCD" >> $CSVFILE
+export MIGRAPHX_CK_TUNING=$BLUTUNINGS
+CMD="migraphx-driver perf bert_large_uncased_1_fp16_gpu_1.mxr --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+mi200_gcd_stress $CMD
+CMD="migraphx-driver perf bert_large_uncased_1_fp16_gpu_32.mxr --fill1 input_ids --input-dim @input_ids 32 384 --batch 32"
+mi200_gcd_stress $CMD
+CMD="migraphx-driver perf bert_large_uncased_1_fp16_gpu_64.mxr --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+mi200_gcd_stress $CMD
+
+
+CMD="migraphx-driver perf bert_large_uncased_1_fp16_gpu_1.mxr --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+mi200_oam_stress $CMD
+CMD="migraphx-driver perf bert_large_uncased_1_fp16_gpu_32.mxr --fill1 input_ids --input-dim @input_ids 32 384 --batch 32"
+mi200_oam_stress $CMD
+CMD="migraphx-driver perf bert_large_uncased_1_fp16_gpu_64.mxr --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+mi200_oam_stress $CMD
+
+
+
+
+#export MIGRAPHX_CK_TUNING=$BLUTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+#mi200_gcd_stress $CMD
+#export MIGRAPHX_CK_TUNING=$DSTTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+#mi200_gcd_stress $CMD
+
+
+#echo "MIGRAPHX PERF BS64 GCD" >> $CSVFILE
+#export MIGRAPHX_CK_TUNING=$BBCTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+#mi200_gcd_stress $CMD
+#export MIGRAPHX_CK_TUNING=$BLUTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+#mi200_gcd_stress $CMD
+#export MIGRAPHX_CK_TUNING=$DSTTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 16 384 --batch 16"
+#mi200_gcd_stress $CMD
+
+
+
+#echo "MIGRAPHX PERF BS1 OAM" >> $CSVFILE
+#export MIGRAPHX_CK_TUNING=$BBCTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+#mi200_oam_stress $CMD
+#export MIGRAPHX_CK_TUNING=$BLUTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+#mi200_oam_stress $CMD
+#export MIGRAPHX_CK_TUNING=$DSTTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1"
+#mi200_oam_stress $CMD
+
+
+#echo "MIGRAPHX PERF BS64 OAM" >> $CSVFILE
+#export MIGRAPHX_CK_TUNING=$BBCTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+#mi200_oam_stress $CMD
+#export MIGRAPHX_CK_TUNING=$BLUTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64"
+#mi200_oam_stress $CMD
+#export MIGRAPHX_CK_TUNING=$DSTTUNINGS
+#CMD="migraphx-driver perf /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 16 384 --batch 16"
+#mi200_oam_stress $CMD
+

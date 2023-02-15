@@ -1,0 +1,52 @@
+
+set -x
+
+export ROC_USE_FGS_KERNARG=0
+export TUNER=/workspace/MIGX/tools/tune_ck.py
+
+echo "Run this from the migraphx build dir"
+
+echo "BERT BASE CASED BS1"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 1 384 | grep 'ck_gemm: \[{' | sort -u > ck_bbc_1.log
+python3 $TUNER -n 16 -l ck_bbc_1.log -o ck_bbc_1.json
+MIGRAPHX_CK_TUNING=ck_bbc_1.json migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1
+
+echo "BERT BASE UNCASED BS1"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/bert_base_uncased_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 1 384 | grep 'ck_gemm: \[{' | sort -u > ck_bbu_1.log
+python3 $TUNER -n 16 -l ck_bbu_1.log -o ck_bbu_1.json
+MIGRAPHX_CK_TUNING=ck_bbu_1.json migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1
+
+echo "BERT LARGE UNCASED BS1"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 1 384 | grep 'ck_gemm: \[{' | sort -u > ck_blu_1.log
+python3 $TUNER -n 16 -l ck_blu_1.log -o ck_blu_1.json
+MIGRAPHX_CK_TUNING=ck_blu_1.json migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1
+
+echo "BERT DISTIL BS1"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 1 384 | grep 'ck_gemm: \[{' | sort -u > ck_dist_1.log
+python3 $TUNER -n 16 -l ck_dist_1.log -o ck_dist_1.json
+MIGRAPHX_CK_TUNING=ck_dist_1.json migraphx-driver perf /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1
+
+
+
+echo "BERT BASE CASED BS64"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 64 384 | grep 'ck_gemm: \[{' | sort -u > ck_bbc_64.log
+python3 $TUNER -n 16 -l ck_bbc_64.log -o ck_bbc_64.json
+MIGRAPHX_CK_TUNING=ck_bbc_64.json migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+
+echo "BERT BASE UNCASED BS64"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/bert_base_uncased_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 64 384 | grep 'ck_gemm: \[{' | sort -u > ck_bbu_64.log
+python3 $TUNER -n 16 -l ck_bbu_64.log -o ck_bbu_64.json
+MIGRAPHX_CK_TUNING=ck_bbu_64.json migraphx-driver perf /workspace/benchmarking/onnx_models/bert_base_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+
+
+echo "BERT LARGE UNCASED BS32"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 32 384 | grep 'ck_gemm: \[{' | sort -u > ck_blu_32.log
+python3 $TUNER -n 16 -l ck_blu_32.log -o ck_blu_32.json
+MIGRAPHX_CK_TUNING=ck_blu_32.json migraphx-driver perf /workspace/benchmarking/onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+
+
+echo "BERT DISTIL BS16"
+MIGRAPHX_LOG_CK_GEMM=1 migraphx-driver run /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx -g --fill1 input_ids --input-dim @input_ids 16 384 | grep 'ck_gemm: \[{' | sort -u > ck_dist_16.log
+python3 $TUNER -n 16 -l ck_dist_16.log -o ck_dist_16.json
+MIGRAPHX_CK_TUNING=ck_dist_16.json migraphx-driver perf /workspace/benchmarking/onnx_models/distilgpt2_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+

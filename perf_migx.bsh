@@ -1,0 +1,52 @@
+#!/bin/bash
+
+set -e
+set -x
+
+export MIGRAPHX_DISABLE_MIOPEN_FUSION=1
+export ROC_USE_FGS_KERNARG=0
+
+PrWD=$(pwd)
+
+CSVRESULTS=$PrWD/perf_results.csv
+
+#wget https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx
+
+
+# Save off the Rate/QPS value
+echo "model,performance,metric" > $CSVRESULTS
+
+/opt/rocm/bin/migraphx-driver perf ./resnet50-v1-7.onnx 2>&1 |tee results.out
+awk -F'[/ ]' '/Rate/{k=$2}END{print "resnet50_bs1_fp32," k ",QPS"}' results.out >> $CSVRESULTS
+
+MIGRAPHX_TRACE_PASSES=1 /opt/rocm/bin/migraphx-driver perf ./resnet50-v1-7.onnx --batch 16 2>&1 |tee results.out
+awk -F'[/ ]' '/Rate/{k=$2}END{print "resnet50_bs16_fp32," k ",QPS"}' results.out >> $CSVRESULTS
+
+/opt/rocm/bin/migraphx-driver perf ./resnet50-v1-7.onnx --fp16 2>&1 |tee results.out
+awk -F'[/ ]' '/Rate/{k=$2}END{print "resnet50_bs1_fp16," k ",QPS"}' results.out >> $CSVRESULTS
+
+/opt/rocm/bin/migraphx-driver perf ./resnet50-v1-7.onnx --fp16 --batch 16 2>&1 |tee results.out
+awk -F'[/ ]' '/Rate/{k=$2}END{print "resnet50_bs16_fp16," k ",QPS"}' results.out >> $CSVRESULTS
+
+
+/opt/rocm/bin/migraphx-driver perf ./resnet50-v1-7.onnx 2>&1 |tee results.out
+awk -F'[/ ]' '/Rate/{k=$2}END{print "resnet50_bs1_fp32," k ",QPS"}' results.out >> $CSVRESULTS
+
+/opt/rocm/bin/migraphx-driver perf ./onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1
+awk -F'[/ ]' '/Rate/{k=$2}END{print "BERT_Large_BS1_FP16," k ",QPS"}' results.out >> $CSVRESULTS
+
+/opt/rocm/bin/migraphx-driver perf ./onnx_models/bert_large_uncased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+awk -F'[/ ]' '/Rate/{k=$2}END{print "BERT_Large_BS32_FP16," k ",QPS"}' results.out >> $CSVRESULTS
+
+/opt/rocm/bin/migraphx-driver perf ./onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 1 384 --batch 1
+awk -F'[/ ]' '/Rate/{k=$2}END{print "BERT_Base_BS1_FP16," k ",QPS"}' results.out >> $CSVRESULTS
+
+/opt/rocm/bin/migraphx-driver perf ./onnx_models/bert_base_cased_1_fp16_gpu.onnx --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+awk -F'[/ ]' '/Rate/{k=$2}END{print "BERT_Base_BS64_FP16," k ",QPS"}' results.out >> $CSVRESULTS
+
+
+
+cat $CSVRESULTS
+
+# unset printing trace to not confuse Jenkinsfile
+set +x
