@@ -1,0 +1,38 @@
+#!/bin/bash
+
+set -x 
+
+LOGFILE=./mlir.perf
+echo "###########################################" >>  $LOGFILE
+echo "New Run $(pwd)" >>  $LOGFILE
+date >> $LOGFILE
+ls -l /etc/alternatives |grep "rocm ->" >> $LOGFILE
+echo "###########################################" >>  $LOGFILE
+
+unset MIGRAPHX_ENABLE_MLIR
+
+while read testcase
+do
+    echo $testcase >> $LOGFILE
+    /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase 2>&1 |tee raw_perf.txt
+    cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+
+    echo "MLIR ENABLED $testcase" >> $LOGFILE
+    MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase 2>&1 |tee raw_perf.txt
+    cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+
+    echo "MLIR ENABLED $testcase" >> $LOGFILE
+    MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase --exhaustive-tune 2>&1 |tee raw_perf.txt
+    cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+done <<TESTLIST
+/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 384 --batch 8
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+/models/ORT/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
+#TESTLIST
