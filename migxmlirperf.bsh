@@ -7,7 +7,8 @@ echo "###########################################" >>  $LOGFILE
 echo "New Run $(pwd)" >>  $LOGFILE
 date >> $LOGFILE
 echo "GPU: $(/opt/rocm/bin/rocminfo |grep -o -m 1 'gfx.*')" >> $LOGFILE
-echo "MIGX: $(/workspace/AMDMIGraphX/build/bin/migraphx-driver -v)" >> $LOGFILE
+echo "MIGX: $(/workspace/AMDMIGraphX/build/bin/migraphx-driver perf -v)" >> $LOGFILE
+echo "MIGX Commit: $(git -C /workspace/AMDMIGraphX log -n 1  --pretty=oneline)" >> $LOGFILE
 ls -l /etc/alternatives |grep "rocm ->" >> $LOGFILE
 echo "###########################################" >>  $LOGFILE
 
