@@ -6,6 +6,8 @@ LOGFILE=./mlir.perf
 echo "###########################################" >>  $LOGFILE
 echo "New Run $(pwd)" >>  $LOGFILE
 date >> $LOGFILE
+echo "GPU: $(/opt/rocm/bin/rocminfo |grep -o -m 1 'gfx.*')" >> $LOGFILE
+echo "MIGX: $(/workspace/AMDMIGraphX/build/bin/migraphx-driver -v)" >> $LOGFILE
 ls -l /etc/alternatives |grep "rocm ->" >> $LOGFILE
 echo "###########################################" >>  $LOGFILE
 
@@ -17,34 +19,37 @@ do
         continue;
     fi
 
-    echo $testcase >> $LOGFILE
-    /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase 2>&1 |tee raw_perf.txt
-    cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+    for datatype in "" "--fp16" "--int8"; do
+        echo "$testcase $datatype" >> $LOGFILE
+        /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
+        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
 
-    echo "MLIR ENABLED $testcase" >> $LOGFILE
-    MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase 2>&1 |tee raw_perf.txt
-    cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        echo "MLIR ENABLED $testcase $datatype" >> $LOGFILE
+        MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
+        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
 
-    echo "MLIR ENABLED --exhaustive-tune $testcase" >> $LOGFILE
-    MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase --exhaustive-tune 2>&1 |tee raw_perf.txt
-    cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        echo "MLIR ENABLED $testcase --exhaustive-tune $datatype" >> $LOGFILE
+        MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype --exhaustive-tune 2>&1 |tee raw_perf.txt
+        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+    done
+
 done <<TESTLIST
-#/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-#/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
-#/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
-#/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-#/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
-#/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
-#/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-#/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 384 --batch 8
-#/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
-#/models/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
+/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 384 --batch 8
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+/models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
 /models/torchvision/resnet50i64.onnx --batch 64
-/models/torchvision/resnet50i64.onnx --batch 64 --fp16
 /models/torchvision/densenet121i32.onnx --batch 32
-/models/torchvision/densenet121i32.onnx --batch 32 --fp16
 /models/torchvision/inceptioni32.onnx --batch 32
-/models/torchvision/inceptioni32.onnx --batch 32 --fp16
 /models/cadene/inceptionv4i16.onnx --batch 16
 /models/cadene/resnext101_64x4di16.onnx --batch 16
 /models/slim/mobilenet_i64.pb --batch 64
