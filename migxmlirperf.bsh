@@ -6,8 +6,8 @@ LOGFILE=./mlir.perf
 echo "###########################################" >>  $LOGFILE
 echo "New Run $(pwd)" >>  $LOGFILE
 date >> $LOGFILE
-echo "GPU: $(/opt/rocm/bin/rocminfo |grep -o -m 1 'gfx.*')" >> $LOGFILE
-echo "MIGX: $(/workspace/AMDMIGraphX/build/bin/migraphx-driver perf -v)" >> $LOGFILE
+echo "GPU: $(rocminfo |grep -o -m 1 'gfx.*')" >> $LOGFILE
+echo "MIGX: $(/workspace/AMDMIGraphX/build/bin/migraphx-driver version)" >> $LOGFILE
 echo "MIGX Commit: $(git -C /workspace/AMDMIGraphX log -n 1  --pretty=oneline)" >> $LOGFILE
 ls -l /etc/alternatives |grep "rocm ->" >> $LOGFILE
 echo "###########################################" >>  $LOGFILE
@@ -27,10 +27,6 @@ do
 
         echo "MLIR ENABLED $testcase $datatype" >> $LOGFILE
         MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
-        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-
-        echo "MLIR ENABLED $testcase --exhaustive-tune $datatype" >> $LOGFILE
-        MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype --exhaustive-tune 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
     done
 
