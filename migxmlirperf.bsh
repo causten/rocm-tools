@@ -31,6 +31,8 @@ do
     done
 
 done <<TESTLIST
+/models/mlperf/resnet50_v1.onnx --batch 1
+/models/mlperf/resnet50_v1.onnx --batch 64
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 384
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
@@ -44,6 +46,8 @@ done <<TESTLIST
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 384 --batch 8
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
 /models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
+/models/bert/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0
+/models/bert/bert_squad_mlperf_1_1.onnx --fill1 input_ids --fill1 input_mask --fill1 segment_ids
 /models/torchvision/resnet50i64.onnx --batch 64
 /models/torchvision/densenet121i32.onnx --batch 32
 /models/torchvision/inceptioni32.onnx --batch 32
