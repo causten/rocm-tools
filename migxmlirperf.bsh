@@ -3,6 +3,8 @@
 set -x 
 
 LOGFILE=./mlir.perf
+LOGSUMMARYFILE=./mlir_summary.perf
+
 echo "###########################################" >>  $LOGFILE
 echo "New Run $(pwd)" >>  $LOGFILE
 date >> $LOGFILE
@@ -24,10 +26,17 @@ do
         echo "$testcase $datatype" >> $LOGFILE
         /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        echo "MODEL      , $testcase, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
 
         echo "MLIR ENABLED $testcase $datatype" >> $LOGFILE
         MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        echo "MODEL MLIR , $testcase, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+
+        echo "CK   ENABLED $testcase $datatype" >> $LOGFILE
+        MIGRAPHX_ENABLE_CK=1 MIGRAPHX_TUNE_CK=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
+        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        echo "MODEL CK   , $testcase, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
     done
 
 done <<TESTLIST
