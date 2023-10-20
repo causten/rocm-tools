@@ -5,6 +5,8 @@ set -x
 LOGFILE=./mlir.perf
 LOGSUMMARYFILE=./mlir_summary.perf
 
+DRIVERPATH="/workspace/AMDMIGraphX/build/bin/migraphx-driver"
+
 echo "###########################################" >>  $LOGFILE
 echo "New Run $(pwd)" >>  $LOGFILE
 date >> $LOGFILE
@@ -16,67 +18,89 @@ echo "###########################################" >>  $LOGFILE
 
 unset MIGRAPHX_ENABLE_MLIR
 
-while read testcase
+COUNTER=1
+
+while read testcase params
 do
     if [[ $str =~ ^# ]]; then
         continue;
     fi
 
     for datatype in "" "--fp16" "--int8"; do
-        echo "$testcase $datatype" >> $LOGFILE
-        /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
+        echo "TEST: $COUNTER, DEFAULT $testcase $params $datatype" >> $LOGFILE
+        $DRIVERPATH perf $testcase $parms $datatype 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-        echo "MODEL      , $testcase, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        echo "TEST: $COUNTER, DEFAULT   , $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
 
-        echo "MLIR ENABLED $testcase $datatype" >> $LOGFILE
-        MIGRAPHX_ENABLE_MLIR=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
+        echo "TEST: $COUNTER, MODEL FULL MLIR $testcase $params $datatype" >> $LOGFILE
+        MIGRAPHX_ENABLE_EXTRA_MLIR=1 $DRIVERPATH perf $testcase $parms  --exhaustive-tune $datatype 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-        echo "MODEL MLIR , $testcase, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        echo "TEST: $COUNTER, MODEL FULL MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
 
-        echo "CK   ENABLED $testcase $datatype" >> $LOGFILE
-        MIGRAPHX_ENABLE_CK=1 MIGRAPHX_TUNE_CK=1 /workspace/AMDMIGraphX/build/bin/migraphx-driver perf $testcase $datatype 2>&1 |tee raw_perf.txt
+        echo "TEST: $COUNTER, MODEL BLAS $testcase $params $datatype" >> $LOGFILE
+        MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_USE_ROCBLAS_TUNING_API=1 $DRIVERPATH perf $testcase $parms $datatype --exhaustive-tune 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-        echo "MODEL CK   , $testcase, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        echo "TEST: $COUNTER, MODEL BLAS, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+
+        echo "TEST: $COUNTER, MODEl  CK $testcase $params $datatype" >> $LOGFILE
+        MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1 $DRIVERPATH perf $testcase $parms $datatype --exhaustive-tune 2>&1 |tee raw_perf.txt
+        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        echo "TEST: $COUNTER, MODEl  CK, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+
+	(( COUNTER++ ))
     done
 
 done <<TESTLIST
 /models/mlperf/resnet50_v1.onnx --batch 1
 /models/mlperf/resnet50_v1.onnx --batch 64
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
-/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
-/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 384 --batch 8
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
-/models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
-/models/bert/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0
 /models/bert/bert_squad_mlperf_1_1.onnx --fill1 input_ids --fill1 input_mask --fill1 segment_ids
-/models/torchvision/resnet50i64.onnx --batch 64
-/models/torchvision/densenet121i32.onnx --batch 32
-/models/torchvision/inceptioni32.onnx --batch 32
-/models/cadene/inceptionv4i16.onnx --batch 16
-/models/cadene/resnext101_64x4di16.onnx --batch 16
-/models/slim/mobilenet_i64.pb --batch 64
-/models/slim/nasnet_i64.pb --batch 64
-/models/slim/resnet50v2_i64.pb --batch 64
-/models/huggingface-transformers/bert_mrpc8.onnx --fill1 input.1 --fill1 input.5 --fill1 onnx::Unsqueeze_1 --onnx --batch 8
-/models/tf-misc/bert_mrpc1.pb --fill1 input_ids_1 --fill1 segment_ids_1 --fill1 input_mask_1 --tf --batch 1
-/models/pytorch-examples/wlang_gru.onnx --fill0 input.1 --onnx
-/models/pytorch-examples/wlang_lstm.onnx --fill0 input.1 --onnx
-/models/torchvision/resnet50i1.onnx
-/models/torchvision/inceptioni1.onnx
-/models/cadene/dpn92i1.onnx
-/models/cadene/resnext101_64x4di1.onnx
-/models/slim/vgg16_i1.pb
-/models/slim/mobilenet_i1.pb
-/models/slim/inceptionv4_i1.pb
-/models/onnx-misc/taau_low_res_downsample_d2s_for_infer_time_fp16_opset11.onnx --input-dim @inputs 1 1920 1080 8
-/models/agentmodel/AgentModel.onnx
+/models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
 TESTLIST
+
+
+#/models/mlperf/resnet50_v1.onnx --batch 1
+#/models/mlperf/resnet50_v1.onnx --batch 64
+#/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+#/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+#/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+#/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+#/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+#/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+#/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+#/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+#/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+#/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
+#/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 384 --batch 8
+#/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+#/models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
+#/models/bert/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0
+#/models/bert/bert_squad_mlperf_1_1.onnx --fill1 input_ids --fill1 input_mask --fill1 segment_ids
+#/models/torchvision/resnet50i64.onnx --batch 64
+#/models/torchvision/densenet121i32.onnx --batch 32
+#/models/torchvision/inceptioni32.onnx --batch 32
+#/models/cadene/inceptionv4i16.onnx --batch 16
+#/models/cadene/resnext101_64x4di16.onnx --batch 16
+#/models/slim/mobilenet_i64.pb --batch 64
+#/models/slim/nasnet_i64.pb --batch 64
+#/models/slim/resnet50v2_i64.pb --batch 64
+#/models/huggingface-transformers/bert_mrpc8.onnx --fill1 input.1 --fill1 input.5 --fill1 onnx::Unsqueeze_1 --onnx --batch 8
+#/models/tf-misc/bert_mrpc1.pb --fill1 input_ids_1 --fill1 segment_ids_1 --fill1 input_mask_1 --tf --batch 1
+#/models/pytorch-examples/wlang_gru.onnx --fill0 input.1 --onnx
+#/models/pytorch-examples/wlang_lstm.onnx --fill0 input.1 --onnx
+#/models/torchvision/resnet50i1.onnx
+#/models/torchvision/inceptioni1.onnx
+#/models/cadene/dpn92i1.onnx
+#/models/cadene/resnext101_64x4di1.onnx
+#/models/slim/vgg16_i1.pb
+#/models/slim/mobilenet_i1.pb
+#/models/slim/inceptionv4_i1.pb
+#/models/onnx-misc/taau_low_res_downsample_d2s_for_infer_time_fp16_opset11.onnx --input-dim @inputs 1 1920 1080 8
+#/models/agentmodel/AgentModel.onnx
+#TESTLIST
 
