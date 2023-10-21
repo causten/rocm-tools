@@ -18,7 +18,7 @@ echo "###########################################" >>  $LOGFILE
 
 unset MIGRAPHX_ENABLE_MLIR
 
-COUNTER=1
+COUNTER=0
 
 while read testcase params
 do
@@ -27,27 +27,36 @@ do
     fi
 
     for datatype in "" "--fp16" "--int8"; do
+	(( COUNTER++ ))
         echo "TEST: $COUNTER, DEFAULT $testcase $params $datatype" >> $LOGFILE
         $DRIVERPATH perf $testcase $parms $datatype 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
         echo "TEST: $COUNTER, DEFAULT   , $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
 
-        echo "TEST: $COUNTER, MODEL FULL MLIR $testcase $params $datatype" >> $LOGFILE
+	(( COUNTER++ ))
+        echo "TEST: $COUNTER, MODEL TUNE MLIR $testcase $params $datatype" >> $LOGFILE
+        $DRIVERPATH perf $testcase $parms  --exhaustive-tune $datatype 2>&1 |tee raw_perf.txt
+        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        echo "TEST: $COUNTER, MODEL TUNE MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+
+	(( COUNTER++ ))
+        echo "TEST: $COUNTER, MODEL EXTRA MLIR $testcase $params $datatype" >> $LOGFILE
         MIGRAPHX_ENABLE_EXTRA_MLIR=1 $DRIVERPATH perf $testcase $parms  --exhaustive-tune $datatype 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-        echo "TEST: $COUNTER, MODEL FULL MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        echo "TEST: $COUNTER, MODEL EXTRA MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
 
+	(( COUNTER++ ))
         echo "TEST: $COUNTER, MODEL BLAS $testcase $params $datatype" >> $LOGFILE
         MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_USE_ROCBLAS_TUNING_API=1 $DRIVERPATH perf $testcase $parms $datatype --exhaustive-tune 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
         echo "TEST: $COUNTER, MODEL BLAS, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
 
+	(( COUNTER++ ))
         echo "TEST: $COUNTER, MODEl  CK $testcase $params $datatype" >> $LOGFILE
         MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1 $DRIVERPATH perf $testcase $parms $datatype --exhaustive-tune 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
         echo "TEST: $COUNTER, MODEl  CK, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
 
-	(( COUNTER++ ))
     done
 
 done <<TESTLIST
