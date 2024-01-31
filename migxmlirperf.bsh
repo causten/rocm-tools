@@ -4,6 +4,7 @@ set -x
 
 LOGFILE=./mlir.perf
 LOGSUMMARYFILE=./mlir_summary.perf
+#DRIVERPATH="migraphx-driver"
 DRIVERPATH="/workspace/AMDMIGraphX/build/bin/migraphx-driver"
 
 
@@ -11,7 +12,7 @@ echo "###########################################" >>  $LOGFILE
 echo "New Run $(pwd)" >>  $LOGFILE
 date >> $LOGFILE
 echo "GPU: $(rocminfo |grep -o -m 1 'gfx.*')" >> $LOGFILE
-echo "MIGX: $(/workspace/AMDMIGraphX/build/bin/migraphx-driver version)" >> $LOGFILE
+echo "MIGX: $(/workspace/AMDMIGraphX/build/bin/migraphx-driver --version)" >> $LOGFILE
 echo "MIGX Commit: $(git -C /workspace/AMDMIGraphX log -n 1  --pretty=oneline)" >> $LOGFILE
 ls -l /etc/alternatives |grep "rocm ->" >> $LOGFILE
 echo "###########################################" >>  $LOGFILE
@@ -30,36 +31,49 @@ do
         (time $DRIVERPATH perf $testcase $params $datatype ) 2>&1 |tee raw_perf.txt
         cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
         echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), DEFAULT   , $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
-        sleep 5
-
-	(( COUNTER++ ))
-        echo "TEST: $COUNTER, MODEL TUNE MLIR $testcase $params $datatype" >> $LOGFILE
-        (time $DRIVERPATH perf $testcase $params  --exhaustive-tune $datatype ) 2>&1 |tee raw_perf.txt
-        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-        echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEL TUNE MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
-        sleep 5
-
-	(( COUNTER++ ))
-        echo "TEST: $COUNTER, MODEL EXTRA MLIR $testcase $params $datatype" >> $LOGFILE
-        (time MIGRAPHX_ENABLE_EXTRA_MLIR=1 $DRIVERPATH perf $testcase $params $datatype ) 2>&1 |tee raw_perf.txt
-        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-	echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEL EXTRA MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
-        sleep 5
-
-	(( COUNTER++ ))
-        echo "TEST: $COUNTER, MODEL BLAS $testcase $params $datatype" >> $LOGFILE
-        (time MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_USE_ROCBLAS_TUNING_API=1 $DRIVERPATH perf $testcase $params $datatype --exhaustive-tune ) 2>&1 |tee raw_perf.txt
-        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-	echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEL BLAS, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
-        sleep 5
-
-	(( COUNTER++ ))
-        echo "TEST: $COUNTER, MODEl  CK $testcase $params $datatype" >> $LOGFILE
-        (time MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1 $DRIVERPATH perf $testcase $params $datatype --exhaustive-tune ) 2>&1 |tee raw_perf.txt
-        cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
-	echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEl  CK, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
-        sleep 5
-
+        #sleep 5
+#
+	#(( COUNTER++ ))
+        #echo "TEST: $COUNTER, MODEL EXHAUSTIVE TUNE $testcase $params $datatype" >> $LOGFILE
+        #(time $DRIVERPATH perf $testcase $params  --exhaustive-tune $datatype ) 2>&1 |tee raw_perf.txt
+        #cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        #echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEL TUNE MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        #sleep 5
+#
+	#(( COUNTER++ ))
+        #echo "TEST: $COUNTER, MODEL EXTRA MLIR $testcase $params $datatype" >> $LOGFILE
+        #(time MIGRAPHX_ENABLE_EXTRA_MLIR=1 $DRIVERPATH perf $testcase $params $datatype ) 2>&1 |tee raw_perf.txt
+        #cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+	#echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEL EXTRA MLIR, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        #sleep 5
+#
+	#(( COUNTER++ ))
+        #echo "TEST: $COUNTER, MODEL BLAS $testcase $params $datatype" >> $LOGFILE
+        #(time MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_USE_ROCBLAS_TUNING_API=1 $DRIVERPATH perf $testcase $params $datatype --exhaustive-tune ) 2>&1 |tee raw_perf.txt
+        #cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+	#echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEL BLAS, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        #sleep 5
+#
+	#(( COUNTER++ ))
+        #echo "TEST: $COUNTER, MODEl  CK $testcase $params $datatype" >> $LOGFILE
+        #(time MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1 $DRIVERPATH perf $testcase $params $datatype --exhaustive-tune ) 2>&1 |tee raw_perf.txt
+        #cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+	#echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MODEl  CK, $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        #sleep 5
+#
+        #(( COUNTER++ ))
+        #echo "TEST: $COUNTER,  MLIR(FSD ATN CNV DOT) $testcase $params $datatype" >> $LOGFILE
+        #(time MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,attention,convolution,dot $DRIVERPATH perf $testcase $params $datatype ) 2>&1 |tee raw_perf.txt
+        #cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+	#echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MLIR(FSD ATN CNV DOT), $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        #sleep 5
+#
+        #(( COUNTER++ ))
+        #echo "TEST: $COUNTER,   MLIR(FSD CNV DOT)$testcase $params $datatype" >> $LOGFILE
+        #(time MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,convolution,dot $DRIVERPATH perf $testcase $params $datatype ) 2>&1 |tee raw_perf.txt
+        #cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
+        #echo "TEST: $COUNTER, $(tail raw_perf.txt |grep "real"|cut -f2- ), MLIR(FSD CNV DOT), $testcase, $params, $datatype, $(grep 'Total time:' raw_perf.txt) " >> $LOGSUMMARYFILE
+        #sleep 5
     done
 
 done <<TESTLIST
@@ -68,15 +82,21 @@ done <<TESTLIST
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 384
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
-/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
-/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
-/models/ORT/onnx_models/bert_base_cased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 32
+/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 32 32 --batch 32
+/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 32 --batch 64
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 32
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 32 --batch 16
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 32 --batch 32
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 384 --batch 8
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 32
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 8 32 --batch 8
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 32 --batch 16
 /models/onnx-model-zoo/gpt2-10.onnx --batch 1
 /models/bert/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0
 /models/bert/bert_squad_mlperf_1_1.onnx --fill1 input_ids --fill1 input_mask --fill1 segment_ids
@@ -102,5 +122,9 @@ done <<TESTLIST
 /models/onnx-misc/taau_low_res_downsample_d2s_for_infer_time_fp16_opset11.onnx --input-dim @inputs 1 1920 1080 8
 /models/agentmodel/AgentModel.onnx
 /models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
+/models/bert/bert-large-uncased.onnx --input-dim @input_ids 32 32 @attention_mask 32 32 @token_type_ids 32 32 --fill1 input_ids attention_mask token_type_ids --batch 32
+/models/bert/bert-large-uncased.onnx --input-dim @input_ids 32 384 @attention_mask 32 384 @token_type_ids 32 384 --fill1 input_ids attention_mask token_type_ids --batch 32
+/models/bert/bert-large-uncased.onnx --input-dim @input_ids 1 32 @attention_mask 1 32 @token_type_ids 1 32 --fill1 input_ids attention_mask token_type_ids
+/models/bert/bert-large-uncased.onnx --input-dim @input_ids 1 384 @attention_mask 1 384 @token_type_ids 1 384 --fill1 input_ids attention_mask token_type_ids
 TESTLIST
 
