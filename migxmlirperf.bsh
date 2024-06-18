@@ -31,7 +31,7 @@ function run_test {
 
     echo "TEST: $COUNTER, $title $env_vars $modelname $modelparms $modeldatatype" >> $LOGFILE
 
-    ( if [ -n "$env_vars" ]; then export $env_vars; fi; time $DRIVERPATH perf --exhaustive-tune $modelname $modelparms $modeldatatype ) 2>&1 |tee raw_perf.txt
+    ( if [ -n "$env_vars" ]; then export $env_vars; fi; time $DRIVERPATH perf $modelname $modelparms $modeldatatype ) 2>&1 |tee raw_perf.txt
     cat raw_perf.txt |sed -n '/Summary:/,$p'  >>  $LOGFILE
 
     runtime=$(tail raw_perf.txt |grep "real"|cut -f2- )
@@ -50,12 +50,12 @@ do
     for datatype in "--fp16"; do
 
         run_test "DEFAULT" "" "$testcase" "$params" "$datatype"
-        run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
-        run_test "MODEL BLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
+        #run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
+        #run_test "MODEL BLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
         #run_test "MODEl  CK" "MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
-        run_test "MLIR(FSD ATN CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,attention,convolution,dot" $testcase "$params" "$datatype"
-        run_test "MLIR(FSD CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,convolution,dot" $testcase "$params" "$datatype"
-        run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params" "$datatype"
+        #run_test "MLIR(FSD ATN CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,attention,convolution,dot" $testcase "$params" "$datatype"
+        #run_test "MLIR(FSD CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,convolution,dot" $testcase "$params" "$datatype"
+        #run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params" "$datatype"
 
     done
 
@@ -77,6 +77,7 @@ done <<TESTLIST
 /models/onnx-model-zoo/gpt2-10.onnx --batch 1
 /models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
 /models/sd/unet/model.onnx --input-dim @sample 8 4 64 64 @timestep 1 @encoder_hidden_states 8 64 1024 --batch 4
+/models/sdxl/unet/model.onnx --input-dim @sample 2 4 128 128 @timestep 1 @encoder_hidden_states 2 77 2048 @time_ids 2 6 @text_embeds 2 1280
 /models/bert/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0
 /models/mlperf/bert_large_mlperf.onnx --fill1 input_ids --fill1 input_mask --fill1 segment_ids
 /models/torchvision/resnet50i64.onnx --batch 64
@@ -104,4 +105,5 @@ done <<TESTLIST
 /models/bert/bert-large-uncased.onnx --input-dim @input_ids 32 384 @attention_mask 32 384 @token_type_ids 32 384 --fill1 input_ids attention_mask token_type_ids --batch 32
 /models/bert/bert-large-uncased.onnx --input-dim @input_ids 1 32 @attention_mask 1 32 @token_type_ids 1 32 --fill1 input_ids attention_mask token_type_ids
 /models/bert/bert-large-uncased.onnx --input-dim @input_ids 1 384 @attention_mask 1 384 @token_type_ids 1 384 --fill1 input_ids attention_mask token_type_ids
+
 TESTLIST
