@@ -2,8 +2,8 @@
 
 #set -x
 
-LOGFILE=./mlir.perf
-LOGSUMMARYFILE=./mlir_summary.perf
+LOGFILE=./mlir.perf.$1
+LOGSUMMARYFILE=./mlir_summary.perf.$1
 DRIVERPATH="/opt/rocm/bin/migraphx-driver"
 #DRIVERPATH="/workspace/AMDMIGraphX/build/bin/migraphx-driver"
 
@@ -47,15 +47,15 @@ do
         continue;
     fi
 
-    for datatype in "--fp16"; do
+    for datatype in " " "--fp16" "--fp16 --int8" "--int8" "--fp8" ; do
 
         run_test "DEFAULT" "" "$testcase" "$params" "$datatype"
-        #run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
-        #run_test "MODEL BLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
-        #run_test "MODEl  CK" "MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
-        #run_test "MLIR(FSD ATN CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,attention,convolution,dot" $testcase "$params" "$datatype"
-        #run_test "MLIR(FSD CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,convolution,dot" $testcase "$params" "$datatype"
-        #run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params" "$datatype"
+        run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
+        run_test "MODEL BLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
+        run_test "MODEl  CK" "MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
+        run_test "MLIR(FSD ATN CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,attention,convolution,dot" $testcase "$params" "$datatype"
+        run_test "MLIR(FSD CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,convolution,dot" $testcase "$params" "$datatype"
+        run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params" "$datatype"
 
     done
 
