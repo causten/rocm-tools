@@ -40,6 +40,7 @@ function run_test {
 }
 
 # MIGRAPHX_MLIR_TRACE=1 MIGRAPHX_TRACE_BENCHMARKING=2
+# MIGRAPHX_PROBLEM_CACHE=/workspace/perf.json
 
 while read testcase params
 do
@@ -48,35 +49,48 @@ do
     fi
 
     for datatype in " " "--fp16" "--fp16 --int8" "--int8" "--fp8" ; do
+    #for datatype in "--fp16" ; do
 
         run_test "DEFAULT" "" "$testcase" "$params" "$datatype"
         run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
-        run_test "MODEL BLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
-        run_test "MODEl  CK" "MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
-        run_test "MLIR(FSD ATN CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,attention,convolution,dot" $testcase "$params" "$datatype"
-        run_test "MLIR(FSD CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,convolution,dot" $testcase "$params" "$datatype"
-        run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params" "$datatype"
+        run_test "NHWC NOTUNE" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params " "$datatype"
+        run_test "EXHAUSTIVE TUNE NHWC" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params --exhaustive-tune" "$datatype"
+        run_test "MODEL rocBLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
+        run_test "MODEL hipBLAS" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1" $testcase "$params --exhaustive-tune" "$datatype"
+        run_test "MODEL hipBLAS GT" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1 MIGRAPHX_ENABLE_HIP_GEMM_TUNING=1" $testcase "$params --exhaustive-tune" "$datatype"
+
+        #run_test "MODEl  CK" "MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
+        #run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params  --exhaustive-tune" "$datatype"
+        #run_test "MLIR(FSD_CON CNV )" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused_convolution,convolution" $testcase "$params  --exhaustive-tune" "$datatype"
+        #run_test "MLIR(DOT FUS_DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=dot,fused_dot" $testcase "$params --exhaustive-tune" "$datatype"
+        #run_test "MLIR(FSD CNV DOT)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=fused,convolution,dot" $testcase "$params --exhaustive-tune" "$datatype"
+        #run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params --exhaustive-tune" "$datatype"
 
     done
 
 done <<TESTLIST
 /models/mlperf/resnet50_v1.onnx --batch 1
 /models/mlperf/resnet50_v1.onnx --batch 64
+/models/mlperf/resnet50_v1.onnx --batch 512
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 384
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 384 --batch 64
+/models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 256 384 --batch 256
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 1 32
 /models/ORT/onnx_models/bert_base_cased_1.onnx  --fill1 input_ids --input-dim @input_ids 64 32 --batch 64
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 384 --batch 32
+/models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 256 384 --batch 256
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 32
 /models/ORT/onnx_models/bert_large_uncased_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 32 32 --batch 32
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 384
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 384 --batch 16
+/models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 256 384 --batch 256
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 32
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 32 --batch 16
 /models/onnx-model-zoo/gpt2-10.onnx --batch 1
 /models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
 /models/sd/unet/model.onnx --input-dim @sample 8 4 64 64 @timestep 1 @encoder_hidden_states 8 64 1024 --batch 4
+/models/sd/unet/model.onnx --input-dim @sample 64 4 64 64 @timestep 1 @encoder_hidden_states 64 64 1024 --batch 32
 /models/sdxl/unet/model.onnx --input-dim @sample 2 4 128 128 @timestep 1 @encoder_hidden_states 2 77 2048 @time_ids 2 6 @text_embeds 2 1280
 /models/bert/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0
 /models/mlperf/bert_large_mlperf.onnx --fill1 input_ids --fill1 input_mask --fill1 segment_ids
