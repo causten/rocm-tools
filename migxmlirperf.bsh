@@ -48,16 +48,32 @@ do
         continue;
     fi
 
-    for datatype in " " "--fp16" "--fp16 --int8" "--int8" "--fp8" ; do
-    #for datatype in "--fp16" ; do
+    #for datatype in " " "--fp16" "--fp16 --int8" "--int8" "--fp8" ; do
+    for datatype in "--fp16" ; do
 
         run_test "DEFAULT" "" "$testcase" "$params" "$datatype"
-        run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
-        run_test "NHWC NOTUNE" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params " "$datatype"
-        run_test "EXHAUSTIVE TUNE NHWC" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params --exhaustive-tune" "$datatype"
-        run_test "MODEL rocBLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
-        run_test "MODEL hipBLAS" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1" $testcase "$params --exhaustive-tune" "$datatype"
-        run_test "MODEL hipBLAS GT" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1 MIGRAPHX_ENABLE_HIP_GEMM_TUNING=1" $testcase "$params --exhaustive-tune" "$datatype"
+        run_test "MLIR CF" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution" "$testcase" "$params" "$datatype"
+        run_test "MLIR ATTN" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" "$testcase" "$params" "$datatype"
+        run_test "MLIR DISPOOL" "MIGRAPHX_DISABLE_MIOPEN_POOLING=1" "$testcase" "$params" "$datatype"
+        run_test "MLIR DISLNF" "MIGRAPHX_DISABLE_LAYERNORM_FUSION=1" "$testcase" "$params" "$datatype"
+        run_test "NHWC" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params" "$datatype"
+        run_test "MLIR NHWC " "MIGRAPHX_ENABLE_NHWC=1 MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution" "$testcase" "$params" "$datatype"
+
+
+        #run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
+        #run_test "NHWC NOTUNE" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params " "$datatype"
+        #run_test "EXHAUSTIVE TUNE NHWC" "MIGRAPHX_ENABLE_NHWC=1 MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution,attention MIGRAPHX_DISABLE_MIOPEN_POOLING=1" "$testcase" "$params --exhaustive-tune" "$datatype"
+
+
+        #run_test "EXHAUSTIVE TUNE NHWC" "MIGRAPHX_ENABLE_NHWC=1 MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution,attention MIGRAPHX_DISABLE_MIOPEN_POOLING=1" "$testcase" "$params" "$datatype"
+        #run_test "EXHAUSTIVE TUNE NHWC" "MIGRAPHX_ENABLE_NHWC=1 MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution,attention MIGRAPHX_DISABLE_MIOPEN_POOLING=1" "$testcase" "$params --exhaustive-tune" "$datatype"
+        #run_test "EXHAUSTIVE TUNE NHWC" "MIGRAPHX_ENABLE_NHWC=1 MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution,attention MIGRAPHX_DISABLE_MIOPEN_POOLING=1" "$testcase" "$params --exhaustive-tune" "$datatype"
+        
+
+
+#un_test "MODEL rocBLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
+        #un_test "MODEL hipBLAS" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1" $testcase "$params --exhaustive-tune" "$datatype"
+        #un_test "MODEL hipBLAS GT" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1 MIGRAPHX_ENABLE_HIP_GEMM_TUNING=1" $testcase "$params --exhaustive-tune" "$datatype"
 
         #run_test "MODEl  CK" "MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
         #run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params  --exhaustive-tune" "$datatype"
@@ -88,10 +104,10 @@ done <<TESTLIST
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 1 32
 /models/ORT/onnx_models/distilgpt2_1_fp16_gpu.onnx  --fill1 input_ids --input-dim @input_ids 16 32 --batch 16
 /models/onnx-model-zoo/gpt2-10.onnx --batch 1
-/models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024
-/models/sd/unet/model.onnx --input-dim @sample 8 4 64 64 @timestep 1 @encoder_hidden_states 8 64 1024 --batch 4
-/models/sd/unet/model.onnx --input-dim @sample 64 4 64 64 @timestep 1 @encoder_hidden_states 64 64 1024 --batch 32
-/models/sdxl/unet/model.onnx --input-dim @sample 2 4 128 128 @timestep 1 @encoder_hidden_states 2 77 2048 @time_ids 2 6 @text_embeds 2 1280
+/models/sd/unet/model.onnx --input-dim @sample 2 4 64 64 @timestep 1 @encoder_hidden_states 2 64 1024 --batch 2
+/models/sd/unet/model.onnx --input-dim @sample 8 4 64 64 @timestep 1 @encoder_hidden_states 8 64 1024 --batch 8
+/models/sd/unet/model.onnx --input-dim @sample 64 4 64 64 @timestep 1 @encoder_hidden_states 64 64 1024 --batch 64
+/models/sdxl/unet/model.onnx --input-dim @sample 2 4 128 128 @timestep 1 @encoder_hidden_states 2 77 2048 @time_ids 2 6 @text_embeds 2 1280 --batch 2
 /models/bert/bertsquad-12.onnx --fill1 input_ids:0 --fill1 input_mask:0 --fill1 segment_ids:0
 /models/mlperf/bert_large_mlperf.onnx --fill1 input_ids --fill1 input_mask --fill1 segment_ids
 /models/torchvision/resnet50i64.onnx --batch 64
