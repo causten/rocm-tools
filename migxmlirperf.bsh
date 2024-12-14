@@ -48,16 +48,16 @@ do
         continue;
     fi
 
-    #for datatype in " " "--fp16" "--fp16 --int8" "--int8" "--fp8" ; do
-    for datatype in "--fp16" ; do
+    for datatype in " " "--fp16" "--fp16 --int8" "--int8" "--fp16 --fp8" "--fp8" ; do
+    #for datatype in "--fp16" ; do
 
         run_test "DEFAULT" "" "$testcase" "$params" "$datatype"
-        run_test "MLIR CF" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution" "$testcase" "$params" "$datatype"
-        run_test "MLIR ATTN" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" "$testcase" "$params" "$datatype"
-        run_test "MLIR DISPOOL" "MIGRAPHX_DISABLE_MIOPEN_POOLING=1" "$testcase" "$params" "$datatype"
-        run_test "MLIR DISLNF" "MIGRAPHX_DISABLE_LAYERNORM_FUSION=1" "$testcase" "$params" "$datatype"
-        run_test "NHWC" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params" "$datatype"
-        run_test "MLIR NHWC " "MIGRAPHX_ENABLE_NHWC=1 MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution" "$testcase" "$params" "$datatype"
+        #run_test "MLIR CF" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution" "$testcase" "$params" "$datatype"
+        #run_test "MLIR ATTN" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" "$testcase" "$params" "$datatype"
+        #run_test "MLIR DISPOOL" "MIGRAPHX_DISABLE_MIOPEN_POOLING=1" "$testcase" "$params" "$datatype"
+        #run_test "MLIR DISLNF" "MIGRAPHX_DISABLE_LAYERNORM_FUSION=1" "$testcase" "$params" "$datatype"
+        #run_test "NHWC" "MIGRAPHX_ENABLE_NHWC=1" "$testcase" "$params" "$datatype"
+        #run_test "MLIR NHWC " "MIGRAPHX_ENABLE_NHWC=1 MIGRAPHX_MLIR_USE_SPECIFIC_OPS=convolution,fused_convolution" "$testcase" "$params" "$datatype"
 
 
         #run_test "EXHAUSTIVE TUNE" "" "$testcase" "$params --exhaustive-tune" "$datatype"
@@ -71,9 +71,9 @@ do
         
 
 
-#un_test "MODEL rocBLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
-        #un_test "MODEL hipBLAS" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1" $testcase "$params --exhaustive-tune" "$datatype"
-        #un_test "MODEL hipBLAS GT" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1 MIGRAPHX_ENABLE_HIP_GEMM_TUNING=1" $testcase "$params --exhaustive-tune" "$datatype"
+        run_test "MODEL rocBLAS" "MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
+        run_test "MODEL hipBLAS" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1" $testcase "$params " "$datatype"
+        run_test "MODEL hipBLAS GT" "MIGRAPHX_DISABLE_MLIR=1 MIGRAPHX_ENABLE_HIPBLASLT_GEMM=1 MIGRAPHX_ENABLE_HIP_GEMM_TUNING=1" $testcase "$params --exhaustive-tune" "$datatype"
 
         #run_test "MODEl  CK" "MIGRAPHX_ENABLE_CK=1 MIGRAPHX_DISABLE_MLIR=1" $testcase "$params --exhaustive-tune" "$datatype"
         #run_test "MLIR(ATN)" "MIGRAPHX_MLIR_USE_SPECIFIC_OPS=attention" $testcase "$params  --exhaustive-tune" "$datatype"
