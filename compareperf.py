@@ -41,7 +41,7 @@ def compare_perf(driver, f, env1, env2):
     print("Compare perf for {}".format(f))
     p1 = run_perf_report(driver, f, mlir=True, env=env1)
     p2 = run_perf_report(driver, f, mlir=False, env=env2)
-    return p2 / p1
+    return [p1,p2]
 
 def compare_mlir(driver, f, env, db):
     p1 = {'MIGRAPHX_MLIR_USE_SPECIFIC_OPS': 'dot,fused,attention,convolution','MIGRAPHX_MLIR_TUNE_EXHAUSTIVE' : '1'} | env
@@ -79,7 +79,7 @@ def main():
         ts = [compare_mlir(args.driver_path, i, env, db) for i in args.inputs]
 
     for i,t in zip(args.inputs, ts):
-        print(i, t)
+        print(i, t[0], t[1], t[1]/t[0])
 
 if __name__ == "__main__":
     main()
