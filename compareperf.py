@@ -1,4 +1,5 @@
 import os, shlex, shutil, argparse, subprocess, json, sys, contextlib, shelve
+import dbm.dumb, pickle
 
 @contextlib.contextmanager
 def null_resource():
@@ -49,16 +50,16 @@ def compare_mlir(driver, f, env, db):
     if db != None:
         if f in db:
             print(f"Skipping {f}")
-            return db[f]
+            return pickle.loads(db[f])
     result = compare_perf(driver, f, p1, p2)
     if db != None:
         print(f"Saving {f}")
-        db[f] = result
+        db[f] = pickle.dumps(result)
     return result
 
 def optional_open(f):
     if f:
-        return shelve.open(f)
+        return dbm.dumb.open(f,'c')
     else:
         return null_resource()
 
